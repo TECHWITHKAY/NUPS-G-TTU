@@ -1,0 +1,22 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploaded files (should be on cloud storage in production)
+/uploads/*
+
+# Logs
+*.log
+
+# OS generated files
