@@ -180,17 +180,19 @@ if (isset($_POST['add_blog'])) {
             $image = sanitize($_POST['video_url'] ?? '');
         }
         
-        // Ensure media_type column exists
+        // Ensure media_type column exists (PostgreSQL: ENUM unsupported, use VARCHAR + CHECK)
         try {
             if (!columnExists($conn, 'blogs', 'media_type')) {
-                $conn->exec("ALTER TABLE blogs ADD COLUMN media_type ENUM('image', 'video') DEFAULT 'image'");
+                $conn->exec("ALTER TABLE blogs ADD COLUMN media_type VARCHAR(20) DEFAULT 'image'");
+                $conn->exec("ALTER TABLE blogs ADD CONSTRAINT IF NOT EXISTS chk_blogs_media_type CHECK (media_type IN ('image', 'video'))");
             }
         } catch (Exception $e) {
             // Column might already exist
         }
         
-        $stmt = $conn->prepare("INSERT INTO blogs (title, content, author, status, image, media_type) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$title, $content, $author, $status, $image, $media_type]);
+        // blogs table stores author_id (FK to users), not a free-text author
+        $stmt = $conn->prepare("INSERT INTO blogs (title, content, author_id, status, image, media_type) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$title, $content, $_SESSION['user_id'] ?? null, $status, $image, $media_type]);
         $message = 'Blog post added successfully!';
     }
 }
@@ -230,8 +232,9 @@ if (isset($_POST['upload_media'])) {
                 $upload_path = '../uploads/' . $new_filename;
                 
                 if (move_uploaded_file($_FILES['media_file']['tmp_name'], $upload_path)) {
-                    $stmt = $conn->prepare("INSERT INTO media (title, file_name, media_type) VALUES (?, ?, ?)");
-                    $stmt->execute([$title, $new_filename, $media_type]);
+                    // media table uses file_type (not media_type) and requires file_path
+                    $stmt = $conn->prepare("INSERT INTO media (title, file_name, file_type, file_path, uploaded_by) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$title, $new_filename, $media_type, $new_filename, $_SESSION['user_id'] ?? null]);
                     $message = 'Media uploaded successfully!';
                 }
             } else {
@@ -275,10 +278,10 @@ if (isset($_POST['save_quiz_settings'])) {
             $existing = $stmt->fetch();
             
             if ($existing) {
-                $stmt = $conn->prepare("UPDATE quiz_settings SET quiz_start = ?, quiz_duration_hours = ?, is_active = ? WHERE id = ?");
+                $stmt = $conn->prepare("UPDATE quiz_settings SET quiz_start = ?, quiz_duration_hours = ?, is_active = ?::boolean WHERE id = ?");
                 $stmt->execute([$quiz_start, $quiz_duration, $is_active, $existing['id']]);
             } else {
-                $stmt = $conn->prepare("INSERT INTO quiz_settings (quiz_start, quiz_duration_hours, is_active) VALUES (?, ?, ?)");
+                $stmt = $conn->prepare("INSERT INTO quiz_settings (quiz_start, quiz_duration_hours, is_active) VALUES (?, ?, ?::boolean)");
                 $stmt->execute([$quiz_start, $quiz_duration, $is_active]);
             }
             $message = 'Quiz settings saved successfully!';

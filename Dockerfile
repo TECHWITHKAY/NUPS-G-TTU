@@ -6,12 +6,13 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
+    libpq-dev \
     zip \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install MySQL extension
-RUN docker-php-ext-install pdo pdo_mysql gd
+# Install PostgreSQL PDO extension (replaces pdo_mysql)
+RUN docker-php-ext-install pdo pdo_pgsql gd
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite

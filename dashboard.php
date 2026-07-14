@@ -1,6 +1,6 @@
 <?php
-require_once '../config.php';
-require_once '../db.php';
+require_once 'config.php';
+require_once 'db.php';
 
 // Check if admin is logged in
 if (!isLoggedIn() || !isAdmin()) {
@@ -30,7 +30,10 @@ $executives_count = $stmt->fetch();
 // Ensure media_type column exists in blogs table
 try {
     if (!columnExists($conn, 'blogs', 'media_type')) {
-        $conn->exec("ALTER TABLE blogs ADD COLUMN media_type ENUM('image', 'video') DEFAULT 'image'");
+        // PostgreSQL: ENUM is not supported, use VARCHAR with a CHECK constraint.
+        // ADD COLUMN IF NOT EXISTS keeps this safe for already-migrated schemas.
+        $conn->exec("ALTER TABLE blogs ADD COLUMN IF NOT EXISTS media_type VARCHAR(20) DEFAULT 'image'");
+        $conn->exec("ALTER TABLE blogs ADD CONSTRAINT IF NOT EXISTS chk_blogs_media_type CHECK (media_type IN ('image', 'video'))");
     }
 } catch (Exception $e) {
     // Table might not exist yet
@@ -51,9 +54,10 @@ $quiz_taken = $quiz_taken_count['count'] ?? 0;
 $quiz_not_taken = $total_members_count - $quiz_taken;
 
 // Quiz pass/fail (assuming pass is score >= 50% of total)
+// NULLIF avoids division-by-zero errors (PostgreSQL is strict, unlike MySQL)
 $stmt = $conn->query("SELECT 
-    SUM(CASE WHEN (score * 100.0 / total_questions) >= 50 THEN 1 ELSE 0 END) as passed,
-    SUM(CASE WHEN (score * 100.0 / total_questions) < 50 THEN 1 ELSE 0 END) as failed
+    SUM(CASE WHEN (score * 100.0 / NULLIF(total_questions, 0)) >= 50 THEN 1 ELSE 0 END) as passed,
+    SUM(CASE WHEN (score * 100.0 / NULLIF(total_questions, 0)) < 50 THEN 1 ELSE 0 END) as failed
     FROM quiz_results");
 $quiz_pass_fail = $stmt->fetch();
 $quiz_passed = $quiz_pass_fail['passed'] ?? 0;
@@ -157,7 +161,7 @@ if (isset($_POST['add_event'])) {
         $location = sanitize($_POST['location'] ?? '');
         $image = 'event-default.jpg';
     
-        // Convert datetime-local format to MySQL DATETIME format
+        // Convert datetime-local format to PostgreSQL TIMESTAMP format
         if (!empty($event_date)) {
             // Validate and parse the datetime-local input (format: YYYY-MM-DDTHH:MM)
             $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $event_date);
@@ -166,7 +170,7 @@ if (isset($_POST['add_event'])) {
                 // Invalid date format - clear to trigger validation error below
                 $event_date = '';
             } else {
-                // Format to MySQL DATETIME (YYYY-MM-DD HH:MM:SS)
+                // Format to SQL TIMESTAMP (YYYY-MM-DD HH:MM:SS)
                 $event_date = $dateTime->format('Y-m-d H:i:s');
             }
         }
@@ -307,13 +311,7 @@ if (isset($_POST['add_blog'])) {
             $error = $upload_error;
         } else {
             // Check if media_type column exists, if not use old insert
-            $column_exists = false;
-            try {
-                $stmt = $conn->query("SHOW COLUMNS FROM blogs LIKE 'media_type'");
-                $column_exists = $stmt->fetch() !== false;
-            } catch (Exception $e) {
-                $column_exists = false;
-            }
+            $column_exists = columnExists($conn, 'blogs', 'media_type');
             
             if ($column_exists) {
                 $stmt = $conn->prepare("INSERT INTO blogs (title, content, image, media_type, author_id, status) VALUES (?, ?, ?, ?, ?, ?)");
@@ -338,7 +336,7 @@ if (isset($_POST['add_blog'])) {
 // Get existing blogs
 $existing_blogs = [];
 try {
-    $stmt = $conn->query("SELECT b.*, u.username FROM blogs b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.created_at DESC");
+    $stmt = $conn->query("SELECT b.*, (u.first_name || ' ' || u.last_name) AS username FROM blogs b LEFT JOIN users u ON b.author_id = u.id ORDER BY b.created_at DESC");
     $existing_blogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $existing_blogs = [];
@@ -474,7 +472,7 @@ if (isset($_POST['add_daily_quiz'])) {
         $quiz_date = $_POST['quiz_date'] ?? '';
         $quiz_start = $_POST['quiz_start'] ?? '';
         
-        // Convert datetime-local format to MySQL DATETIME format
+        // Convert datetime-local format to PostgreSQL TIMESTAMP format
         $quiz_start_datetime = '';
         if (!empty($quiz_start)) {
             $dateTime = DateTime::createFromFormat('Y-m-d\TH:i', $quiz_start);
@@ -501,13 +499,7 @@ if (isset($_POST['add_daily_quiz'])) {
             }
             
             // Check if quiz_date column exists
-            $column_exists = false;
-            try {
-                $stmt = $conn->query("SHOW COLUMNS FROM quiz_questions LIKE 'quiz_date'");
-                $column_exists = $stmt->fetch() !== false;
-            } catch (Exception $e) {
-                $column_exists = false;
-            }
+            $column_exists = columnExists($conn, 'quiz_questions', 'quiz_date');
             
             if ($column_exists) {
                 $stmt = $conn->prepare("INSERT INTO quiz_questions (question, option_a, option_b, option_c, option_d, correct_answer, points, quiz_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
@@ -535,7 +527,7 @@ if (isset($_POST['add_daily_quiz'])) {
                         $stmt = $conn->prepare("UPDATE quiz_settings SET quiz_start = ? WHERE id = ?");
                         $stmt->execute([$quiz_start_datetime, $settings['id']]);
                     } else {
-                        $stmt = $conn->prepare("INSERT INTO quiz_settings (quiz_start, quiz_duration_hours, is_active) VALUES (?, 24, 1)");
+                        $stmt = $conn->prepare("INSERT INTO quiz_settings (quiz_start, quiz_duration_hours, is_active) VALUES (?, 24, TRUE)");
                         $stmt->execute([$quiz_start_datetime]);
                     }
                 }
@@ -611,11 +603,11 @@ if (isset($_POST['update_quiz_schedule'])) {
         
         if ($has_quiz_settings && isset($quiz_settings['id'])) {
             // Update existing settings
-            $stmt = $conn->prepare("UPDATE quiz_settings SET quiz_start = ?, quiz_duration_hours = ?, is_active = ? WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE quiz_settings SET quiz_start = ?, quiz_duration_hours = ?, is_active = ?::boolean WHERE id = ?");
             $stmt->execute([$quiz_start_value, $quiz_duration, $quiz_active, $quiz_settings['id']]);
         } else {
             // Insert new settings
-            $stmt = $conn->prepare("INSERT INTO quiz_settings (quiz_start, quiz_duration_hours, is_active) VALUES (?, ?, ?)");
+            $stmt = $conn->prepare("INSERT INTO quiz_settings (quiz_start, quiz_duration_hours, is_active) VALUES (?, ?, ?::boolean)");
             $stmt->execute([$quiz_start_value, $quiz_duration, $quiz_active]);
         }
         

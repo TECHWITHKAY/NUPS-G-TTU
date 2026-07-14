@@ -1,18 +1,20 @@
 <?php
 // Load configuration
 require_once 'config.php';
+require_once 'db.php';
 
 $page_title = 'Events';
 
-// Try to connect to database, but don't fail if database doesn't exist
+// Try to connect to database, but don't fail if database doesn't exist (PostgreSQL)
 $events = [];
-try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $stmt = $pdo->query("SELECT * FROM events ORDER BY event_date ASC");
-    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Database not set up - show empty state
+if ($conn !== null) {
+    try {
+        $stmt = $conn->query("SELECT * FROM events ORDER BY event_date ASC");
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Database not set up - show empty state
+        $events = [];
+    }
 }
 
 include 'header.php';

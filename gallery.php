@@ -1,18 +1,20 @@
 <?php
 // Load configuration
 require_once 'config.php';
+require_once 'db.php';
 
 $page_title = 'Gallery';
 
-// Try to connect to database
+// Try to connect to database (PostgreSQL). Degrade gracefully if unavailable.
 $media = [];
-try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $stmt = $pdo->query("SELECT * FROM media ORDER BY created_at DESC");
-    $media = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Database not set up
+if ($conn !== null) {
+    try {
+        $stmt = $conn->query("SELECT * FROM media ORDER BY created_at DESC");
+        $media = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Database not set up
+        $media = [];
+    }
 }
 
 include 'header.php';
@@ -112,7 +114,7 @@ include 'header.php';
         <?php else: ?>
             <div class="gallery-grid">
                 <?php foreach ($media as $item): ?>
-                    <?php if ($item['type'] === 'image'): ?>
+                    <?php if (($item['file_type'] ?? 'image') === 'image'): ?>
                         <div class="gallery-item">
                             <img src="uploads/<?php echo htmlspecialchars($item['file_path']); ?>" alt="<?php echo htmlspecialchars($item['title']); ?>">
                             <div class="gallery-overlay">

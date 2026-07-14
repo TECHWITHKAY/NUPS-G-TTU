@@ -1,15 +1,17 @@
 <?php
 require_once 'config.php';
+require_once 'db.php';
 
-// Try to connect to database
+// Try to connect to database (PostgreSQL). Degrade gracefully if unavailable.
 $social_links = [];
-try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $stmt = $pdo->query("SELECT * FROM social_links WHERE is_active = 1");
-    $social_links = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Database not set up - use default empty
+if ($conn !== null) {
+    try {
+        $stmt = $conn->query("SELECT * FROM social_links WHERE is_active = TRUE");
+        $social_links = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Database not set up - use default empty
+        $social_links = [];
+    }
 }
 ?>
     

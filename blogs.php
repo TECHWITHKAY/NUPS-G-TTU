@@ -1,18 +1,20 @@
 <?php
 // Load configuration
 require_once 'config.php';
+require_once 'db.php';
 
 $page_title = 'Blogs';
 
-// Try to connect to database
+// Try to connect to database (PostgreSQL). Degrade gracefully if unavailable.
 $blogs = [];
-try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $stmt = $pdo->query("SELECT * FROM blogs ORDER BY created_at DESC");
-    $blogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Database not set up
+if ($conn !== null) {
+    try {
+        $stmt = $conn->query("SELECT * FROM blogs ORDER BY created_at DESC");
+        $blogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Database not set up
+        $blogs = [];
+    }
 }
 
 include 'header.php';

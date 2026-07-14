@@ -1,6 +1,6 @@
 # NUPS-G Church Website
 
-A modern, responsive church website for NUPS-G TTU (National Union of Presbyterian Students of Ghana, Takoradi Technical University). Built with PHP, MySQL, HTML, CSS, and JavaScript.
+A modern, responsive church website for NUPS-G TTU (National Union of Presbyterian Students of Ghana, Takoradi Technical University). Built with PHP, PostgreSQL, HTML, CSS, and JavaScript.
 
 ## Features
 
@@ -17,8 +17,8 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 
 ## Technology Stack
 
-- **Backend**: PHP 8.0+
-- **Database**: MySQL 5.7+ / MariaDB 10.2+
+- **Backend**: PHP 8.2+
+- **Database**: PostgreSQL 12+ (Render PostgreSQL supported)
 - **Frontend**: HTML5, CSS3, JavaScript
 - **Icons**: Font Awesome 6.4
 - **Design**: Responsive, modern UI with gradients and animations
@@ -35,8 +35,8 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 ├── blog-detail.php         # Single blog post page
 ├── blogs.php               # Blog listing page
 ├── config.php              # Configuration and constants
-├── database.sql            # Database schema (MySQL)
-├── db.php                  # Database connection and helpers
+├── database.sql            # Database schema (PostgreSQL)
+├── db.php                  # PostgreSQL PDO connection and helpers
 ├── donate.php              # Donation page
 ├── events.php              # Events listing
 ├── executives.php          # Church executives
@@ -62,8 +62,8 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 ### Prerequisites
 
 - Web server (Apache/Nginx/XAMPP/WAMP)
-- PHP 8.0 or higher with PDO MySQL extension
-- MySQL 5.7+ or MariaDB 10.2+
+- PHP 8.2 or higher with the `pdo_pgsql` extension
+- PostgreSQL 12+ (local) or a Render PostgreSQL instance
 - Composer (optional, if adding dependencies later)
 
 ### Option A: Docker Setup (Recommended)
@@ -78,27 +78,37 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 
 3. **Access the site** at `http://localhost:8080`
 
-### Option B: Manual Setup
+### Option B: Manual Setup (Local PostgreSQL)
 
 1. **Clone/Download** - Copy all files to your web server directory
 
 2. **Configure Database**:
-    - Create a MySQL database named `nupsg_church`
-    - Import the `database.sql` file to create tables and seed default data
+   - Create a PostgreSQL database named `nupsg_church`
+   - Import the `database.sql` file to create tables and seed default data:
+     ```bash
+     psql -U postgres -d nupsg_church -f database.sql
+     ```
+   - Or on Render, run the same against your `DATABASE_URL`.
 
 3. **Configure Environment**:
-    - Copy `.env.example` to `.env`
-    - Update database credentials and site URL in `.env` or directly in `config.php`
+   - Copy `.env.example` to `.env`
+   - Update database credentials and site URL in `.env` or directly in `config.php`
 
-    ```env
-    DB_HOST=localhost
-    DB_USER=root
-    DB_PASS=your_password_here
-    DB_NAME=nupsg_church
-    SITE_NAME=NUPS-G Church
-    SITE_URL=http://localhost
-    ADMIN_EMAIL=admin@nupsgchurch.com
-    ```
+     ```env
+     DB_HOST=localhost
+     DB_PORT=5432
+     DB_USER=postgres
+     DB_PASS=your_password_here
+     DB_NAME=nupsg_church
+     SITE_NAME=NUPS-G Church
+     SITE_URL=http://localhost
+     ADMIN_EMAIL=admin@nupsgchurch.com
+     APP_ENV=development
+     ```
+
+   - On **Render**, leave these empty and set `DATABASE_URL` instead. The app
+     automatically parses `DATABASE_URL` (e.g.
+     `postgres://user:pass@host:5432/dbname`) and never hardcodes credentials.
 
 4. **Set Permissions**:
     - Make `uploads/` folder writable (for image/video uploads)
@@ -123,13 +133,16 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 
 | Constant | Description | Default |
 |----------|-------------|---------|
-| `DB_HOST` | Database host | `localhost` |
-| `DB_USER` | Database username | `root` |
+| `DB_HOST` | Database host (local only; ignored when `DATABASE_URL` is set) | `localhost` |
+| `DB_PORT` | Database port (local only) | `5432` |
+| `DB_USER` | Database username | `postgres` |
 | `DB_PASS` | Database password | `` |
 | `DB_NAME` | Database name | `nupsg_church` |
+| `DATABASE_URL` | Full connection string (Render). Auto-detected when present | `` |
 | `SITE_NAME` | Website name | `NUPS-G Church` |
 | `SITE_URL` | Website URL | `http://localhost` |
 | `ADMIN_EMAIL` | Admin contact email | `admin@nupsgchurch.com` |
+| `APP_ENV` | `development` (shows errors) or `production` (logs only) | `development` |
 
 ### Image Requirements
 
@@ -208,8 +221,8 @@ Media queries are implemented for:
 ### Common Issues
 
 1. **Database Connection Error**
-   - Verify database credentials in `.env` or `config.php`
-   - Ensure MySQL server is running
+   - Verify database credentials in `.env` or `config.php` (local) or `DATABASE_URL` (Render)
+   - Ensure PostgreSQL server is running and reachable
    - Check that `database.sql` has been imported
 
 2. **Upload Errors**
