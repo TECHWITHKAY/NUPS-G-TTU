@@ -4,6 +4,7 @@ require_once 'db.php';
 
 $error = '';
 $success = '';
+$old = $_POST; // retain values on validation failure
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $first_name = sanitize($_POST['first_name'] ?? '');
@@ -12,29 +13,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = sanitize($_POST['phone'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
     if (empty($first_name) || empty($last_name) || empty($email) || empty($password)) {
         $error = 'Please fill in all required fields.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Please enter a valid email address.';
     } elseif ($password !== $confirm_password) {
         $error = 'Passwords do not match.';
-    } elseif (strlen($password) < 6) {
-        $error = 'Password must be at least 6 characters.';
+    } elseif (!is_strong_password($password)) {
+        $error = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
     } else {
-        // Check if email already exists
         $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->execute([$email]);
-        
+
         if ($stmt->rowCount() > 0) {
-            $error = 'Email already registered.';
+            $error = 'An account with this email already exists. Try logging in instead.';
         } else {
-            // Hash password
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            
-            // Insert new user
             $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, phone, password) VALUES (?, ?, ?, ?, ?)");
-            
+
             if ($stmt->execute([$first_name, $last_name, $email, $phone, $hashed_password])) {
-                $success = 'Registration successful! You can now login.';
+                $success = 'Registration successful! You can now log in.';
+                $old = [];
             } else {
                 $error = 'Registration failed. Please try again.';
             }
@@ -47,208 +48,130 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - <?php echo SITE_NAME; ?></title>
+    <title>Join NUPS-G - <?php echo SITE_NAME; ?></title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" href="favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="shortcut icon" href="favicon/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .register-container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 450px;
-        }
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .logo h1 {
-            color: #1e3c72;
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-        .logo p {
-            color: #666;
-            font-size: 14px;
-        }
-        .form-row {
-            display: flex;
-            gap: 15px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-            flex: 1;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: #1e3c72;
-        }
-        .btn-register {
-            width: 100%;
-            padding: 12px;
-            background: #1e3c72;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .btn-register:hover {
-            background: #2a5298;
-        }
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .success {
-            background: #efe;
-            color: #3c3;
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .links {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .links a {
-            color: #1e3c72;
-            font-size: 14px;
-        }
-        .links a:hover {
-            text-decoration: underline;
-            color: #2a5298;
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 576px) {
-            .register-container {
-                padding: 30px 20px;
-            }
-            .logo h1 {
-                font-size: 24px;
-            }
-            .form-group {
-                margin-bottom: 15px;
-            }
-            .form-group label {
-                font-size: 14px;
-            }
-            .form-group input {
-                padding: 12px;
-                font-size: 14px;
-            }
-            .btn {
-                padding: 12px;
-                font-size: 14px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .register-container {
-                padding: 25px 15px;
-                margin: 15px;
-            }
-            .logo {
-                margin-bottom: 20px;
-            }
-            .logo h1 {
-                font-size: 22px;
-            }
-            .logo p {
-                font-size: 12px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/auth.css">
 </head>
 <body>
-    <div class="register-container">
-        <div class="logo">
-            <h1><i class="fas fa-church"></i> NUPS-G</h1>
-            <p>Church Management System</p>
-        </div>
-        
-        <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <?php if ($success): ?>
-            <div class="success"><?php echo $success; ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" action="">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="first_name">First Name *</label>
-                    <input type="text" id="first_name" name="first_name" required placeholder="First name">
+    <div class="auth-shell">
+        <!-- Brand panel -->
+        <aside class="auth-brand">
+            <a href="index.php" class="brand-top">
+                <img src="nupsglogo.png" alt="NUPS-G TTU crest">
+                <span><b>NUPS-G TTU</b><small>For Christ We Live</small></span>
+            </a>
+            <div class="verse">
+                <p>&ldquo;I am the vine, ye are the branches: He that abideth in me, and I in him, the same bringeth forth much fruit.&rdquo; <em>- John 15:5</em></p>
+            </div>
+            <ul class="brand-points">
+                <li><i class="fas fa-check-circle"></i> Fellowship with hundreds of believers on campus</li>
+                <li><i class="fas fa-check-circle"></i> Daily devotionals &amp; Bible quiz challenges</li>
+                <li><i class="fas fa-check-circle"></i> Leadership &amp; service opportunities</li>
+            </ul>
+        </aside>
+
+        <!-- Form panel -->
+        <main class="auth-form">
+            <div class="auth-card">
+                <div class="logo-mobile">
+                    <img src="nupsglogo.png" alt="NUPS-G TTU crest">
+                    <b>NUPS-G TTU</b>
                 </div>
-                <div class="form-group">
-                    <label for="last_name">Last Name *</label>
-                    <input type="text" id="last_name" name="last_name" required placeholder="Last name">
+
+                <a href="index.php" class="auth-back"><i class="fas fa-arrow-left"></i> Back to Home</a>
+
+                <div class="auth-head">
+                    <h1>Join the family</h1>
+                    <p>Create your free account in under a minute.</p>
                 </div>
+
+                <?php if ($error): ?>
+                    <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i><div><?php echo $error; ?></div></div>
+                <?php endif; ?>
+                <?php if ($success): ?>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <div><?php echo $success; ?> <a href="login.php" style="font-weight:800; color:var(--success-text); text-decoration:underline;">Log in now &rarr;</a></div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!$success): ?>
+                <form method="POST" action="" novalidate>
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="first_name">First Name <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="first_name" name="first_name" required placeholder="First name" value="<?php echo htmlspecialchars($old['first_name'] ?? ''); ?>" autocomplete="given-name">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="last_name">Last Name <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="last_name" name="last_name" required placeholder="Last name" value="<?php echo htmlspecialchars($old['last_name'] ?? ''); ?>" autocomplete="family-name">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="email">Email Address <span class="req">*</span></label>
+                        <div class="input-wrap">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" name="email" required placeholder="you@example.com" value="<?php echo htmlspecialchars($old['email'] ?? ''); ?>" autocomplete="email">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="phone">Phone Number</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-phone-alt"></i>
+                            <input type="tel" id="phone" name="phone" placeholder="+233 ..." value="<?php echo htmlspecialchars($old['phone'] ?? ''); ?>" autocomplete="tel">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="password">Password <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="password" name="password" required placeholder="Min. 8 characters with uppercase, lowercase, number, special char" autocomplete="new-password">
+                                <button type="button" class="pw-toggle" tabindex="-1" aria-label="Show password" onclick="togglePw(this)"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="confirm_password">Confirm Password <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="confirm_password" name="confirm_password" required placeholder="Repeat password" autocomplete="new-password">
+                                <button type="button" class="pw-toggle" tabindex="-1" aria-label="Show password" onclick="togglePw(this)"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Account</button>
+                    <p class="auth-terms">By joining you agree to be part of a loving, Christ-centred community. <i class="fas fa-heart" style="color: var(--rose);"></i></p>
+                </form>
+
+                <p class="auth-foot">Already have an account? <a href="login.php">Log in</a></p>
+                <?php endif; ?>
             </div>
-            
-            <div class="form-group">
-                <label for="email">Email Address *</label>
-                <input type="email" id="email" name="email" required placeholder="Enter your email">
-            </div>
-            
-            <div class="form-group">
-                <label for="phone">Phone Number</label>
-                <input type="tel" id="phone" name="phone" placeholder="Enter phone number">
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password *</label>
-                <input type="password" id="password" name="password" required placeholder="Create a password">
-            </div>
-            
-            <div class="form-group">
-                <label for="confirm_password">Confirm Password *</label>
-                <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your password">
-            </div>
-            
-            <button type="submit" class="btn-register">Register</button>
-        </form>
-        
-        <div class="links">
-            <a href="login.php">Already have an account? Login</a> | 
-            <a href="index.php">Back to Home</a>
-        </div>
+        </main>
     </div>
+
+    <script>
+        function togglePw(btn) {
+            var input = btn.parentElement.querySelector('input');
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.innerHTML = '<i class="fas fa-eye' + (show ? '-slash' : '') + '"></i>';
+        }
+    </script>
 </body>
 </html>

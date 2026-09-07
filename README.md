@@ -10,6 +10,7 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 - **Events** - Church events with dates and details
 - **Blogs** - Blog posts with image/video support
 - **Gallery** - Photo gallery
+- **Resources** - Downloadable documents (union constitution, hymn book, forms)
 - **Quiz** - Interactive quiz for members with leaderboard
 - **Donate** - Donation functionality
 - **User Authentication** - Registration and login for members
@@ -42,6 +43,9 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 ├── executives.php          # Church executives
 ├── footer.php              # Site footer
 ├── gallery.php             # Photo gallery
+├── resources.php           # Resources download library
+├── resource-download.php   # Login-gated resource download endpoint
+├── resource-view.php       # Login-gated in-browser PDF preview
 ├── header.php              # Site header (navigation)
 ├── history.php             # Church history
 ├── index.php               # Homepage
@@ -102,7 +106,7 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
      DB_NAME=nupsg_church
      SITE_NAME=NUPS-G Church
      SITE_URL=http://localhost
-     ADMIN_EMAIL=admin@nupsgchurch.com
+      ADMIN_EMAIL=sethsefa18@gmail.com
      APP_ENV=development
      ```
 
@@ -119,13 +123,15 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 5. **Access the Site**:
     - Open your browser and navigate to the project URL
 
-## Default Credentials
+## Initial Setup
 
-| Role  | Email                      | Password |
-|-------|----------------------------|----------|
-| Admin | admin@nupsgchurch.com      | admin123 |
+After importing `database.sql`, create an administrator account by registering through the website, then update the role in the database:
 
-> **Note**: Change the default admin password immediately after first login.
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'your-email@example.com';
+```
+
+> **Note**: Use a strong, unique password for the administrator account.
 
 ## Configuration
 
@@ -141,7 +147,7 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 | `DATABASE_URL` | Full connection string (Render). Auto-detected when present | `` |
 | `SITE_NAME` | Website name | `NUPS-G Church` |
 | `SITE_URL` | Website URL | `http://localhost` |
-| `ADMIN_EMAIL` | Admin contact email | `admin@nupsgchurch.com` |
+| `ADMIN_EMAIL` | Admin contact email | `sethsefa18@gmail.com` |
 | `APP_ENV` | `development` (shows errors) or `production` (logs only) | `development` |
 
 ### Image Requirements
@@ -169,6 +175,7 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 - Manage events (add/delete with images)
 - Manage blog posts (add/edit/delete with images or videos)
 - Upload media to gallery
+- Manage member resources (upload/delete downloadable documents)
 - Manage quiz questions and schedule
 - View donation records
 - View site statistics
@@ -184,6 +191,9 @@ A modern, responsive church website for NUPS-G TTU (National Union of Presbyteri
 ### Gallery Media
 - Images: JPG, JPEG, PNG, GIF, WebP
 - Documents: PDF, DOC, DOCX
+
+### Resources (member download library)
+- PDF, Word (DOC/DOCX), PowerPoint (PPT/PPTX), Excel (XLS/XLSX), RTF, TXT, CSV, up to 25MB
 
 ## Responsive Design
 

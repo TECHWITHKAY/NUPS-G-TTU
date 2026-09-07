@@ -4,16 +4,29 @@ require_once 'config.php';
 require_once 'db.php';
 
 $page_title = 'Events';
+$page_description = 'Upcoming events, worship services and community activities at NUPS-G TTU.';
 
-// Try to connect to database, but don't fail if database doesn't exist (PostgreSQL)
+// Fetch events (don't fail if the database is not set up yet)
 $events = [];
 if ($conn !== null) {
     try {
         $stmt = $conn->query("SELECT * FROM events ORDER BY event_date ASC");
         $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
-        // Database not set up - show empty state
         $events = [];
+    }
+}
+
+// Split into upcoming vs past
+$upcoming = [];
+$past = [];
+$now = new DateTime();
+foreach ($events as $event) {
+    $d = new DateTime($event['event_date']);
+    if ($d >= $now) {
+        $upcoming[] = $event;
+    } else {
+        $past[] = $event;
     }
 }
 
@@ -21,138 +34,148 @@ include 'header.php';
 ?>
 
 <main>
-<section class="page-header" style="aspect-ratio: 3 / 1; padding: var(--spacing-lg) clamp(2rem, 8vw, 4rem); display: flex; flex-direction: column; justify-content: center; align-items: center; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
-    <div class="container" style="text-align: center;">
-        <h1 style="font-size: clamp(2rem, 6vw, 3.5rem); color: white; margin-bottom: 1rem;">Upcoming Events</h1>
-        <p style="font-size: clamp(1rem, 3vw, 1.25rem); color: rgba(255,255,255,0.9); max-width: 600px;">Join us for worship, fellowship, and community activities</p>
-    </div>
-</section>
+    <section class="page-hero">
+        <div class="container">
+            <span class="eyebrow"><i class="fas fa-calendar-alt"></i> Calendar</span>
+            <h1>Events &amp; Programmes</h1>
+            <div class="divider"></div>
+            <p>Worship with us, fellowship with us. Never miss what God is doing at TTU</p>
+        </div>
+    </section>
 
-<style>
-.events-section {
-    padding: clamp(3rem, 8vw, 6rem) 0;
-}
-.events-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 2rem;
-}
-.event-card {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.event-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-}
-.event-image {
-    width: 100%;
-    height: 200px;
-    overflow: hidden;
-}
-.event-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-.event-card:hover .event-image img {
-    transform: scale(1.05);
-}
-.event-content {
-    padding: 1.5rem;
-}
-.event-date {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #1e3c72;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-    font-size: 0.9rem;
-}
-.event-content h3 {
-    font-size: 1.25rem;
-    color: #333;
-    margin-bottom: 0.75rem;
-}
-.event-content p {
-    color: #666;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-}
-.event-location {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #888;
-    font-size: 0.9rem;
-}
-.empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    grid-column: 1 / -1;
-}
-.empty-state i {
-    font-size: 4rem;
-    color: #ddd;
-    margin-bottom: 1.5rem;
-}
-.empty-state h3 {
-    font-size: 1.5rem;
-    color: #333;
-    margin-bottom: 0.5rem;
-}
-.empty-state p {
-    color: #888;
-}
-@media (max-width: 768px) {
-    .events-list {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+    <style>
+        .event-feature { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(1.6rem, 4vw, 3rem); align-items: center; }
+        .event-feature .card-media { aspect-ratio: 16/10; border-radius: var(--r-lg) 0 0 var(--r-lg); }
+        .event-feature .feature-body { padding: clamp(1.4rem, 3vw, 2rem); }
+        .event-feature .feature-body h2 { font-size: var(--fs-xl); margin: .6rem 0 .8rem; }
+        .event-feature .feature-body p { color: var(--muted); margin-bottom: 1.2rem; }
+        .meta-chips { display: flex; flex-wrap: wrap; gap: .5rem 1.4rem; color: var(--muted); font-size: var(--fs-sm); font-weight: 600; margin-bottom: 1.3rem; }
+        .meta-chips i { color: var(--gold-dark); margin-right: .35rem; }
+        .past-card { display: flex; align-items: center; gap: 1.2rem; padding: 1.1rem 1.4rem; }
+        .past-card .card-media { flex: none; width: 110px; aspect-ratio: 1; border-radius: var(--r-sm); }
+        .past-card .card-body { padding: 0; flex: 1; }
+        .past-card .card-body h3 { font-size: 1.05rem; }
+        @media (max-width: 900px) { .event-feature { grid-template-columns: 1fr; } .event-feature .card-media { border-radius: var(--r-lg) var(--r-lg) 0 0; } }
+    </style>
 
-<section class="events-section">
-    <div class="container">
-        <?php if (empty($events)): ?>
-            <div class="empty-state">
-                <i class="fas fa-calendar-times"></i>
-                <h3>No Events Scheduled</h3>
-                <p>Check back soon for upcoming events and activities.</p>
-            </div>
-        <?php else: ?>
-            <div class="events-list">
-                <?php foreach ($events as $event): ?>
-                    <div class="event-card">
-                        <?php if (!empty($event['image']) && file_exists('uploads/' . $event['image'])): ?>
-                            <div class="event-image">
-                                <img src="uploads/<?php echo htmlspecialchars($event['image']); ?>" alt="<?php echo htmlspecialchars($event['title']); ?>">
-                            </div>
-                        <?php endif; ?>
-                        <div class="event-content">
-                            <div class="event-date">
-                                <i class="fas fa-calendar"></i>
-                                <?php echo date('F j, Y', strtotime($event['event_date'])); ?>
-                            </div>
-                            <h3><?php echo htmlspecialchars($event['title']); ?></h3>
-                            <p><?php echo htmlspecialchars($event['description']); ?></p>
-                            <?php if (!empty($event['location'])): ?>
-                                <div class="event-location">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <?php echo htmlspecialchars($event['location']); ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
+    <section class="section">
+        <div class="container">
+            <?php if (empty($events)): ?>
+                <div class="empty reveal">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>No events scheduled yet</h3>
+                    <p>We're planning something great. Check back soon for upcoming programmes.</p>
+                </div>
+            <?php else: ?>
+
+                <!-- Next featured event -->
+                <?php if (!empty($upcoming)): $feat = $upcoming[0]; $fd = new DateTime($feat['event_date']); ?>
+                    <div class="section-head reveal" style="margin-bottom:2.2rem;">
+                        <span class="eyebrow">Next Up</span>
+                        <h2>Featured Event</h2>
                     </div>
-                <?php endforeach; ?>
+                    <article class="card reveal" style="overflow:hidden;">
+                        <div class="event-feature">
+                            <div class="card-media">
+                                <?php if (!empty($feat['image']) && $feat['image'] !== 'event-default.jpg' && file_exists('uploads/' . $feat['image'])): ?>
+                                    <img src="uploads/<?php echo htmlspecialchars($feat['image']); ?>" alt="<?php echo htmlspecialchars($feat['title']); ?>">
+                                <?php else: ?>
+                                    <i class="fas fa-calendar-check icon-ph"></i>
+                                <?php endif; ?>
+                            </div>
+                            <div class="feature-body">
+                                <div class="meta-chips">
+                                    <span><i class="fas fa-calendar-alt"></i><?php echo $fd->format('l, F j, Y'); ?></span>
+                                    <span><i class="fas fa-clock"></i><?php echo $fd->format('g:i A'); ?></span>
+                                    <?php if (!empty($feat['location'])): ?>
+                                        <span><i class="fas fa-map-marker-alt"></i><?php echo htmlspecialchars($feat['location']); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <h2><?php echo htmlspecialchars($feat['title']); ?></h2>
+                                <p><?php echo nl2br(htmlspecialchars(text_excerpt($feat['description'] ?? '', 320))); ?></p>
+                                <?php if (!empty($feat['description']) && text_length($feat['description']) > 320): ?>
+                                    <p><strong style="color: var(--primary); font-size:.95rem;">Full details coming soon. Stay tuned!</strong></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </article>
+                <?php endif; ?>
+
+                <!-- Remaining upcoming -->
+                <?php if (count($upcoming) > 1): ?>
+                    <div class="section-head reveal" style="margin-top:4rem;">
+                        <span class="eyebrow">Don't Miss Out</span>
+                        <h2>More Upcoming Events</h2>
+                    </div>
+                    <div class="grid grid-3">
+                        <?php foreach (array_slice($upcoming, 1) as $event): $ed = new DateTime($event['event_date']); ?>
+                            <article class="card card--hover reveal">
+                                <div class="card-media">
+                                    <?php if (!empty($event['image']) && $event['image'] !== 'event-default.jpg' && file_exists('uploads/' . $event['image'])): ?>
+                                        <img src="uploads/<?php echo htmlspecialchars($event['image']); ?>" alt="<?php echo htmlspecialchars($event['title']); ?>" loading="lazy">
+                                    <?php else: ?>
+                                        <i class="fas fa-calendar-alt icon-ph"></i>
+                                    <?php endif; ?>
+                                    <span class="chip-float"><?php echo $ed->format('M j'); ?></span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="card-meta">
+                                        <span><i class="fas fa-clock"></i><?php echo $ed->format('D, g:i A'); ?></span>
+                                        <?php if (!empty($event['location'])): ?><span><i class="fas fa-map-marker-alt"></i><?php echo htmlspecialchars($event['location']); ?></span><?php endif; ?>
+                                    </div>
+                                    <h3><?php echo htmlspecialchars($event['title']); ?></h3>
+                                    <p><?php echo htmlspecialchars(text_excerpt($event['description'] ?? '', 110)); ?></p>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Past events -->
+                <?php if (!empty($past)): ?>
+                    <div class="section-head reveal" style="margin-top:4rem;">
+                        <span class="eyebrow">Gallery of Memories</span>
+                        <h2>Past Events</h2>
+                    </div>
+                    <div class="grid" style="max-width:820px; margin-inline:auto;">
+                        <?php foreach (array_slice(array_reverse($past), 0, 6) as $event): $pd = new DateTime($event['event_date']); ?>
+                            <article class="card card--hover past-card reveal">
+                                <div class="card-media">
+                                    <?php if (!empty($event['image']) && $event['image'] !== 'event-default.jpg' && file_exists('uploads/' . $event['image'])): ?>
+                                        <img src="uploads/<?php echo htmlspecialchars($event['image']); ?>" alt="<?php echo htmlspecialchars($event['title']); ?>" loading="lazy">
+                                    <?php else: ?>
+                                        <i class="fas fa-calendar-check icon-ph"></i>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="card-body">
+                                    <div class="card-meta"><span><i class="fas fa-calendar-alt"></i><?php echo $pd->format('F j, Y'); ?></span></div>
+                                    <h3><?php echo htmlspecialchars($event['title']); ?></h3>
+                                    <?php if (!empty($event['location'])): ?>
+                                        <p style="font-size:.88rem;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($event['location']); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+            <?php endif; ?>
+        </div>
+    </section>
+
+    <section class="section" style="padding-top:0;">
+        <div class="container">
+            <div class="cta-band reveal">
+                <div class="container">
+                    <div>
+                        <h2>Never miss an event</h2>
+                        <p>Subscribe to our updates and be the first to know about services, outreaches and fellowship meetings.</p>
+                    </div>
+                    <a href="register.php" class="btn btn-gold btn-lg"><i class="fas fa-bell"></i> Get Notified</a>
+                </div>
             </div>
-        <?php endif; ?>
-    </div>
-</section>
+        </div>
+    </section>
 </main>
 
 <?php include 'footer.php'; ?>

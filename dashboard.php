@@ -2,17 +2,11 @@
 require_once 'config.php';
 require_once 'db.php';
 
-// Check if admin is logged in
 if (!isLoggedIn() || !isAdmin()) {
-    redirect('../login.php');
+    redirect('login.php');
 }
 
-// Generate CSRF token for form submission prevention
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-$page_title = 'Admin Dashboard';
+redirect('admin/dashboard.php');
 
 // Get statistics
 $stmt = $conn->query("SELECT COUNT(*) as count FROM users WHERE role = 'member'");
@@ -100,7 +94,7 @@ if (isset($_POST['add_executive'])) {
             
             if (in_array($ext, $allowed)) {
                 $new_filename = 'exec_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
-                $upload_path = '../uploads/' . $new_filename;
+                $upload_path = 'uploads/' . $new_filename;
                 
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
                     $image = $new_filename;
@@ -134,7 +128,7 @@ if (isset($_POST['delete_executive'])) {
         $exec = $stmt->fetch();
         
         if ($exec && $exec['image'] != 'default.png') {
-            $image_path = '../uploads/' . $exec['image'];
+            $image_path = 'uploads/' . $exec['image'];
             if (file_exists($image_path)) {
                 unlink($image_path);
             }
@@ -183,7 +177,7 @@ if (isset($_POST['add_event'])) {
             
             if (in_array($ext, $allowed)) {
                 $new_filename = 'event_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
-                $upload_path = '../uploads/' . $new_filename;
+                $upload_path = 'uploads/' . $new_filename;
                 
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
                     $image = $new_filename;
@@ -217,7 +211,7 @@ if (isset($_POST['delete_event'])) {
         $event = $stmt->fetch();
         
         if ($event && $event['image'] != 'event-default.jpg') {
-            $image_path = '../uploads/' . $event['image'];
+            $image_path = 'uploads/' . $event['image'];
             if (file_exists($image_path)) {
                 unlink($image_path);
             }
@@ -355,7 +349,7 @@ if (isset($_POST['delete_blog'])) {
         $blog = $stmt->fetch();
         
         if ($blog && $blog['image'] != 'blog-default.jpg') {
-            $image_path = '../uploads/' . $blog['image'];
+            $image_path = 'uploads/' . $blog['image'];
             if (file_exists($image_path)) {
                 unlink($image_path);
             }
@@ -408,7 +402,7 @@ if (isset($_POST['edit_blog'])) {
                         $stmt->execute([$blog_id]);
                         $old_blog = $stmt->fetch();
                         if ($old_blog && $old_blog['image'] != 'blog-default.jpg') {
-                            $old_path = '../uploads/' . $old_blog['image'];
+                            $old_path = 'uploads/' . $old_blog['image'];
                             if (file_exists($old_path)) {
                                 unlink($old_path);
                             }
@@ -427,7 +421,7 @@ if (isset($_POST['edit_blog'])) {
                         $stmt->execute([$blog_id]);
                         $old_blog = $stmt->fetch();
                         if ($old_blog && $old_blog['image'] != 'blog-default.jpg') {
-                            $old_path = '../uploads/' . $old_blog['image'];
+                            $old_path = 'uploads/' . $old_blog['image'];
                             if (file_exists($old_path)) {
                                 unlink($old_path);
                             }
@@ -644,7 +638,7 @@ if (isset($_POST['upload_media'])) {
             
             if (in_array($ext, $allowed)) {
                 $new_filename = 'media_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
-                $upload_path = '../uploads/' . $new_filename;
+                $upload_path = 'uploads/' . $new_filename;
                 
                 if (move_uploaded_file($_FILES['media_file']['tmp_name'], $upload_path)) {
                     $stmt = $conn->prepare("INSERT INTO media (title, file_name, file_type, file_path, uploaded_by) VALUES (?, ?, ?, ?, ?)");
@@ -678,7 +672,7 @@ if (isset($_POST['delete_media'])) {
         $media = $stmt->fetch();
         
         if ($media) {
-            $file_path = '../uploads/' . $media['file_name'];
+            $file_path = 'uploads/' . $media['file_name'];
             if (file_exists($file_path)) {
                 unlink($file_path);
             }
@@ -696,6 +690,9 @@ if (isset($_POST['delete_media'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $page_title; ?> - <?php echo SITE_NAME; ?></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -704,7 +701,7 @@ if (isset($_POST['delete_media'])) {
             box-sizing: border-box;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: #f5f5f5;
         }
         .admin-header {
@@ -1824,7 +1821,7 @@ if (isset($_POST['delete_media'])) {
                                 <div class="exec-item" style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
                                     <div style="width: 60px; height: 60px; background: #e9ecef; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <?php if ($exec['image'] && $exec['image'] != 'default.png'): ?>
-                                            <img src="../uploads/<?php echo htmlspecialchars($exec['image']); ?>" alt="<?php echo htmlspecialchars($exec['name']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                            <img src="uploads/<?php echo htmlspecialchars($exec['image']); ?>" alt="<?php echo htmlspecialchars($exec['name']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                         <?php else: ?>
                                             <i class="fas fa-user" style="font-size: 24px; color: #1e3c72;"></i>
                                         <?php endif; ?>
@@ -2074,7 +2071,7 @@ if (isset($_POST['delete_media'])) {
                                 <div class="blog-item" style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 15px;">
                                     <div style="width: 60px; height: 60px; background: #e9ecef; border-radius: 5px; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                         <?php if ($blog['image'] && $blog['image'] != 'blog-default.jpg'): ?>
-                                            <img src="../uploads/<?php echo htmlspecialchars($blog['image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                            <img src="uploads/<?php echo htmlspecialchars($blog['image']); ?>" alt="<?php echo htmlspecialchars($blog['title']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                         <?php else: ?>
                                             <i class="fas fa-blog" style="font-size: 24px; color: #1e3c72;"></i>
                                         <?php endif; ?>
@@ -2397,7 +2394,7 @@ if (isset($_POST['delete_media'])) {
                                 <div class="media-item" style="background: #f8f9fa; border-radius: 8px; padding: 10px; text-align: center;">
                                     <?php $ext = pathinfo($media['file_name'], PATHINFO_EXTENSION); ?>
                                     <?php if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])): ?>
-                                        <img src="../uploads/<?php echo htmlspecialchars($media['file_name']); ?>" alt="<?php echo htmlspecialchars($media['title']); ?>" style="width: 100%; height: 100px; object-fit: cover; border-radius: 5px;">
+                                        <img src="uploads/<?php echo htmlspecialchars($media['file_name']); ?>" alt="<?php echo htmlspecialchars($media['title']); ?>" style="width: 100%; height: 100px; object-fit: cover; border-radius: 5px;">
                                     <?php else: ?>
                                         <div class="media-item-icon" style="height: 100px; display: flex; align-items: center; justify-content: center; background: #e9ecef; border-radius: 5px;">
                                             <i class="fas fa-file-<?php echo $ext == 'pdf' ? 'pdf' : 'alt'; ?>" style="font-size: 40px; color: #6c757d;"></i>
