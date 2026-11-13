@@ -91,6 +91,7 @@ function getDbConnection() {
     } catch (PDOException $e) {
         // Log the real error for administrators; never show it to users.
         error_log('PostgreSQL connection failed: ' . $e->getMessage());
+        $GLOBALS['db_last_error'] = $e->getMessage();
         $pdo = null;
         return null;
     }
@@ -98,6 +99,64 @@ function getDbConnection() {
 
 // Global connection handle used throughout the application.
 $conn = getDbConnection();
+
+/**
+ * Answer with a clear 503 page when the database is unreachable.
+ *
+ * Pages across the site query $conn directly, so a null handle used to end in
+ * "Call to a member function query() on null". This single choke point keeps
+ * every page readable and tells the visitor what happened. CLI scripts (cron,
+ * exports, the tools in this repo) are left alone and handle null themselves.
+ */
+function render_database_unavailable()
+{
+    if (PHP_SAPI === 'cli' || headers_sent()) {
+        return;
+    }
+
+    http_response_code(503);
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Retry-After: 60');
+    header('Cache-Control: no-store');
+
+    // In development, show the driver's message to speed up diagnosis.
+    // In production the reason stays in the server log only.
+    $detail = '';
+    if (!defined('APP_ENV') || APP_ENV !== 'production') {
+        $error = isset($GLOBALS['db_last_error']) ? (string)$GLOBALS['db_last_error'] : '';
+        if ($error !== '') {
+            $detail = '<p style="margin-top:1.2rem;font-size:.8rem;color:#64748b;word-break:break-word;">'
+                . htmlspecialchars($error, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</p>';
+        }
+    }
+
+    $site = defined('SITE_NAME') ? SITE_NAME : 'NUPS-G TTU';
+
+    echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+        . '<title>Service unavailable - ' . htmlspecialchars($site, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '</title>'
+        . '<style>body{margin:0;min-height:100vh;display:grid;place-items:center;'
+        . 'font-family:"Plus Jakarta Sans",system-ui,-apple-system,sans-serif;'
+        . 'background:linear-gradient(135deg,#1e3c72,#2a5298);color:#0f172a;padding:1.2rem}'
+        . '.card{background:#fff;max-width:520px;width:100%;border-radius:18px;padding:2.4rem;'
+        . 'text-align:center;box-shadow:0 24px 60px rgba(3,8,24,.35)}'
+        . 'h1{margin:.6rem 0 .4rem;font-size:1.5rem;color:#1e3c72}'
+        . 'p{color:#475569;line-height:1.7;margin:.4rem 0}'
+        . 'a.btn{display:inline-block;margin-top:1.6rem;background:linear-gradient(135deg,#1e3c72,#2a5298);'
+        . 'color:#fff;text-decoration:none;padding:.8rem 1.6rem;border-radius:999px;font-weight:700}'
+        . '</style></head><body><div class="card">'
+        . '<div style="font-size:2.2rem">⛪</div>'
+        . '<h1>We can\'t load this page right now</h1>'
+        . '<p>The website could not reach its database. Please try again in a minute.</p>'
+        . $detail
+        . '<a class="btn" href="index.php">Try again</a>'
+        . '</div></body></html>';
+    exit;
+}
+
+if ($conn === null) {
+    render_database_unavailable();
+}
 
 /**
  * Check whether a table exists (PostgreSQL / information_schema).

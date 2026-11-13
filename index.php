@@ -119,22 +119,24 @@ if ($conn !== null) {
 // Quiz availability (honours admin-scheduled windows; open when unset)
 $quiz_available = true;
 $next_quiz_time = null;
-try {
-    $stmt = $conn->query("SELECT * FROM quiz_settings ORDER BY id DESC LIMIT 1");
-    $quiz_settings = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($quiz_settings) {
-        $quiz_start = new DateTime($quiz_settings['quiz_start']);
-        $duration = (int)$quiz_settings['quiz_duration_hours'];
-        $quiz_end = clone $quiz_start;
-        $quiz_end->modify("+{$duration} hours");
-        $now = new DateTime();
-        $quiz_available = (bool)$quiz_settings['is_active'] && $now >= $quiz_start && $now <= $quiz_end;
-        if (!$quiz_available) {
-            $next_quiz_time = $now < $quiz_start ? $quiz_start : $quiz_end;
+if ($conn !== null) {
+    try {
+        $stmt = $conn->query("SELECT * FROM quiz_settings ORDER BY id DESC LIMIT 1");
+        $quiz_settings = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($quiz_settings) {
+            $quiz_start = new DateTime($quiz_settings['quiz_start']);
+            $duration = (int)$quiz_settings['quiz_duration_hours'];
+            $quiz_end = clone $quiz_start;
+            $quiz_end->modify("+{$duration} hours");
+            $now = new DateTime();
+            $quiz_available = (bool)$quiz_settings['is_active'] && $now >= $quiz_start && $now <= $quiz_end;
+            if (!$quiz_available) {
+                $next_quiz_time = $now < $quiz_start ? $quiz_start : $quiz_end;
+            }
         }
+    } catch (Throwable $e) {
+        $quiz_available = true;
     }
-} catch (Exception $e) {
-    $quiz_available = true;
 }
 
 include 'header.php';
