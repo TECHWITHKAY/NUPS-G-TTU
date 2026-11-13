@@ -20,9 +20,14 @@ try {
         $quiz_end = clone $quiz_start;
         $quiz_end->modify('+' . (int)$quiz_settings['quiz_duration_hours'] . ' hours');
         $now = new DateTime();
-        $quiz_available = (bool)$quiz_settings['is_active'] && $now >= $quiz_start && $now <= $quiz_end;
-        if (!$quiz_available) {
-            $next_quiz_time = $now < $quiz_start ? $quiz_start : $quiz_end;
+
+        // Only a start time in the future closes the quiz. Once a window has
+        // elapsed the daily quiz rolls over to the new day's questions instead
+        // of leaving the page stuck on "closed" with a countdown in the past.
+        $starts_later = $now < $quiz_start;
+        $quiz_available = (bool)$quiz_settings['is_active'] && !$starts_later;
+        if (!$quiz_available && $starts_later) {
+            $next_quiz_time = $quiz_start;
         }
     }
 } catch (Exception $e) {

@@ -293,9 +293,11 @@ function publish_today_questions($conn, $todayKey)
         return 'could not read the question bank';
     }
 
-    // Not enough bank questions at all - refuse to publish a thin paper.
-    if (count($pool) < 10) {
-        return 'only ' . count($pool) . ' bank questions available; at least 10 are needed for a full daily quiz';
+    // Nothing in the bank at all - there is no paper to publish.
+    // Publish whatever the admins have entered (up to 10), so a short quiz is
+    // still playable instead of being silently withheld.
+    if (count($pool) === 0) {
+        return 'no questions in the bank yet';
     }
 
     // Save today's paper and mark the used bank rows, all inside one
