@@ -544,7 +544,7 @@ include 'header.php';
                         <?php else: ?>
                             <h2><?php echo $quiz_available ? "Ready for today's challenge?" : 'The next quiz is on the way!'; ?></h2>
                             <p><?php echo $quiz_available ? 'Answer questions from the Word, earn points, and watch your name rise to the top of the leaderboard.' : ($next_quiz_time ? 'The quiz reopens in ' . $next_quiz_time->format('M j, g:i A') . ". Mark your calendar." : 'Check back soon for the next quiz challenge.'); ?></p>
-                        <?php endif; ?>
+                         <?php endif; ?>
                     </div>
                     <?php if (isAdmin()): ?>
                         <a href="admin/dashboard.php#quiz" class="btn btn-gold btn-lg"><i class="fas fa-plus-circle"></i> Manage Quiz Questions</a>

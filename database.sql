@@ -370,8 +370,8 @@ ON CONFLICT (email) DO NOTHING;
 
 -- Insert default social links (platform is UNIQUE)
 INSERT INTO social_links (platform, url, icon) VALUES
-('Facebook', 'https://facebook.com/nupsgchurch', 'fab fa-facebook'),
+('Facebook', 'https://www.facebook.com/Nups-g-Ttu', 'fab fa-facebook'),
 ('Tiktok', 'https://www.tiktok.com/@nupsg.ttu', 'fab fa-tiktok'),
-('Instagram', 'https://instagram.com/nupsgchurch', 'fab fa-instagram'),
-('YouTube', 'https://youtube.com/nupsgchurch', 'fab fa-youtube')
+('Instagram', 'https://www.instagram.com/nupsg_ttu', 'fab fa-instagram'),
+('YouTube', '#', 'fab fa-youtube')
 ON CONFLICT (platform) DO NOTHING;

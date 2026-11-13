@@ -219,7 +219,7 @@ if (isset($_POST['delete_event'])) {
         
         $stmt = $conn->prepare("DELETE FROM events WHERE id = ?");
         if ($stmt->execute([$event_id])) {
-            $message = 'Event deleted successfully!';
+            $message = 'Event deleted successfully';
         } else {
             $error = 'Failed to delete event.';
         }

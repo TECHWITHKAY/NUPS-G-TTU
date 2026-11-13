@@ -1,6 +1,32 @@
+# Git
 .git
 .gitignore
+
+# OS files
 .DS_Store
-*.md
+Thumbs.db
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads (persisted in Docker volume)
 uploads/*
 !uploads/index.php
+
+# Logs
+*.log
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+start.bat
+stop.bat

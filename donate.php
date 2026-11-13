@@ -141,7 +141,10 @@ include 'header.php';
         .impact i { color: var(--gold); font-size: 1.3rem; margin-bottom: .5rem; display: block; }
         .impact b { display: block; color: #fff; font-size: 1.05rem; }
         .impact small { color: rgba(255,255,255,0.75); }
+        .donate-grid > * { min-width: 0; }
         @media (max-width: 900px) { .donate-grid { grid-template-columns: 1fr; } .impact-strip { grid-template-columns: 1fr; } }
+        /* Long CTA label must wrap on phones, otherwise its nowrap min-width widens the whole page */
+        @media (max-width: 520px) { .donate-grid .btn-block { white-space: normal; line-height: 1.35; } }
     </style>
 
     <section class="section">
