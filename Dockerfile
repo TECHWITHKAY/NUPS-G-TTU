@@ -14,11 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # pdo, mbstring and curl are compiled into the official php:8.2-apache image,
 # so recompiling them here only adds failure points. Only the PostgreSQL PDO
 # driver needs building. The assertion catches a missing built-in early.
-RUN docker-php-ext-install -j"$(nproc)" pdo_pgsql \
-    && php -m | grep -qx pdo \
-    && php -m | grep -qx pdo_pgsql \
-    && php -m | grep -qx mbstring \
-    && php -m | grep -qx curl
+RUN docker-php-ext-install -j"$(nproc)" pdo_pgsql
+
+# Verify the extensions the app relies on. Uses extension_loaded() rather than
+# parsing `php -m`, whose module names are not all lowercase ("PDO" is upper).
+RUN php -r 'foreach (["pdo", "pdo_pgsql", "mbstring", "curl", "fileinfo"] as $e) { if (!extension_loaded($e)) { fwrite(STDERR, "missing PHP extension: " . $e . PHP_EOL); exit(1); } } echo "required PHP extensions present" . PHP_EOL;'
 
 # Configure PHP settings
 RUN echo "upload_max_filesize = 50M" >> /usr/local/etc/php/conf.d/uploads.ini \
