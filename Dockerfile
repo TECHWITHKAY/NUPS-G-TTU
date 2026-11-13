@@ -1,19 +1,24 @@
 # Use PHP with Apache
 FROM php:8.2-apache
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
+# Install system dependencies.
+# libpq-dev is the only one our own extension needs; the official PHP image
+# already links curl, mbstring and pdo, so their -dev packages are not required.
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
-    libzip-dev \
     zip \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql gd mbstring curl
+# Install PHP extensions.
+# pdo, mbstring and curl are compiled into the official php:8.2-apache image,
+# so recompiling them here only adds failure points. Only the PostgreSQL PDO
+# driver needs building. The assertion catches a missing built-in early.
+RUN docker-php-ext-install -j"$(nproc)" pdo_pgsql \
+    && php -m | grep -qx pdo \
+    && php -m | grep -qx pdo_pgsql \
+    && php -m | grep -qx mbstring \
+    && php -m | grep -qx curl
 
 # Configure PHP settings
 RUN echo "upload_max_filesize = 50M" >> /usr/local/etc/php/conf.d/uploads.ini \
