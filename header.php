@@ -15,6 +15,17 @@ if ($conn !== null) {
     }
 }
 
+// The top bar and footer must never show an empty gap: fall back to the
+// fellowship's own handles when the table is empty or has not been seeded yet.
+if (empty($social_links)) {
+    $social_links = [
+        ['platform' => 'Facebook', 'url' => 'https://www.facebook.com/Nups-g-Ttu', 'icon' => 'fab fa-facebook'],
+        ['platform' => 'Tiktok', 'url' => 'https://www.tiktok.com/@nupsg.ttu', 'icon' => 'fab fa-tiktok'],
+        ['platform' => 'Instagram', 'url' => 'https://www.instagram.com/nupsg_ttu', 'icon' => 'fab fa-instagram'],
+        ['platform' => 'YouTube', 'url' => '#', 'icon' => 'fab fa-youtube'],
+    ];
+}
+
 // Current page for nav highlighting (blog detail highlights "Blogs").
 $current_page = basename($_SERVER['PHP_SELF'] ?? 'index.php');
 function nav_is_active($page, $current, $group = []) {

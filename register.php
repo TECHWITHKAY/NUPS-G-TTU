@@ -24,21 +24,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!is_strong_password($password)) {
         $error = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
     } else {
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$email]);
+        try {
+            // PostgreSQL PDO does not report SELECT row counts, so look at the
+            // fetched row instead of rowCount() - otherwise the duplicate check
+            // silently passes and the INSERT fails on the unique index.
+            $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
 
-        if ($stmt->rowCount() > 0) {
-            $error = 'An account with this email already exists. Try logging in instead.';
-        } else {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, phone, password) VALUES (?, ?, ?, ?, ?)");
-
-            if ($stmt->execute([$first_name, $last_name, $email, $phone, $hashed_password])) {
-                $success = 'Registration successful! You can now log in.';
-                $old = [];
+            if ($stmt->fetch()) {
+                $error = 'An account with this email already exists. Try logging in instead.';
             } else {
-                $error = 'Registration failed. Please try again.';
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, phone, password) VALUES (?, ?, ?, ?, ?)");
+
+                if ($stmt->execute([$first_name, $last_name, $email, $phone, $hashed_password])) {
+                    $success = 'Registration successful! You can now log in.';
+                    $old = [];
+                } else {
+                    $error = 'Registration failed. Please try again.';
+                }
             }
+        } catch (Throwable $e) {
+            error_log('Registration failed: ' . $e->getMessage());
+            $error = 'Registration is unavailable right now. Please try again in a moment.';
         }
     }
 }

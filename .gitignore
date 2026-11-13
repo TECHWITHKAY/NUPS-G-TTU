@@ -20,3 +20,10 @@ Thumbs.db
 *.log
 
 # OS generated files
+
+# Docker compose env (contains credentials)
+.env.docker
+
+# Local agent/debug artifacts
+.freebuff/
+*.log.err

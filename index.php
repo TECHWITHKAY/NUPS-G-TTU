@@ -12,7 +12,6 @@ $user_name = $logged_in ? ($_SESSION['user_name'] ?? 'Member') : '';
 // Upcoming events (for cards + hero spotlight)
 $upcoming_events = [];
 $next_event = null;
-$event_count = 0;
 if ($conn !== null) {
     try {
         $stmt = $conn->query("SELECT * FROM events WHERE event_date >= NOW() ORDER BY event_date ASC LIMIT 3");
@@ -20,13 +19,9 @@ if ($conn !== null) {
 
         $stmt = $conn->query("SELECT * FROM events WHERE event_date >= NOW() ORDER BY event_date ASC LIMIT 1");
         $next_event = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-
-        $stmt = $conn->query("SELECT COUNT(*) FROM events");
-        $event_count = (int)$stmt->fetchColumn();
     } catch (Exception $e) {
         $upcoming_events = [];
         $next_event = null;
-        $event_count = 0;
     }
 }
 
@@ -55,25 +50,6 @@ if ($conn !== null) {
         }
     } catch (Exception $e) {
         $blogs = [];
-    }
-}
-
-// Counts for the stats band
-$member_count = 0;
-$blog_count = 0;
-$exec_count = 0;
-if ($conn !== null) {
-    try {
-        $stmt = $conn->query("SELECT COUNT(*) FROM users WHERE role = 'member'");
-        $member_count = (int)$stmt->fetchColumn();
-
-        $stmt = $conn->query("SELECT COUNT(*) FROM blogs WHERE status = 'published'");
-        $blog_count = (int)$stmt->fetchColumn();
-
-        $stmt = $conn->query("SELECT COUNT(*) FROM executives");
-        $exec_count = (int)$stmt->fetchColumn();
-    } catch (Exception $e) {
-        // keep zeros
     }
 }
 
@@ -145,6 +121,10 @@ include 'header.php';
 <main>
     <!-- ============ HERO ============ -->
     <section class="hero">
+        <!-- Banner video (silent loop); images/banner.jpg stays as the CSS fallback -->
+        <video class="hero-banner" autoplay muted loop playsinline preload="auto" poster="images/banner.jpg" aria-hidden="true" tabindex="-1">
+            <source src="images/banner.mp4" type="video/mp4">
+        </video>
         <div class="container">
             <?php if ($logged_in): ?>
                 <div class="hero-card reveal in">
@@ -291,22 +271,6 @@ include 'header.php';
                     <h3>Prayer Support</h3>
                     <p>Our prayer team is always available to stand with you and support you in every season.</p>
                 </article>
-            </div>
-        </div>
-    </section>
-
-    <!-- ============ STATS ============ -->
-    <section class="section section--mist">
-        <div class="container">
-            <div class="section-head reveal">
-                <span class="eyebrow">Our Community at a Glance</span>
-                <h2>Church Statistics</h2>
-            </div>
-            <div class="grid grid-4 reveal">
-                <div class="stat"><div class="num">60+</div><div class="lbl">Years of Ministry</div></div>
-                <div class="stat"><div class="num"><?php echo (int)$member_count; ?></div><div class="lbl">Registered Members</div></div>
-                <div class="stat"><div class="num"><?php echo (int)$event_count; ?></div><div class="lbl">Events Hosted</div></div>
-                <div class="stat"><div class="num"><?php echo (int)$blog_count; ?></div><div class="lbl">Articles Published</div></div>
             </div>
         </div>
     </section>

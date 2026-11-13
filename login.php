@@ -14,35 +14,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (is_login_rate_limited($conn, $ip, $email)) {
         $error = 'Too many failed attempts. Please wait 15 minutes before trying again.';
     } else {
-        $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
+        // A missing table, a database hiccup or a bad column must not leave the
+        // person staring at a blank page: report it and keep the form usable.
+        try {
+            $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
 
-        if ($user && password_verify($password, $user['password'])) {
-            session_regenerate_id(true);
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['email'] = $user['email'];
-            $_SESSION['user_email'] = $user['email'];
-            $_SESSION['user_phone'] = $user['phone'] ?? '';
+            if ($user && password_verify($password, $user['password'])) {
+                session_regenerate_id(true);
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['email'] = $user['email'];
+                $_SESSION['user_email'] = $user['email'];
+                $_SESSION['user_phone'] = $user['phone'] ?? '';
 
-            // Clear failed attempts for this IP/email on success
-            try {
-                $stmt = $conn->prepare("DELETE FROM login_attempts WHERE ip_address = ? AND email = ?");
-                $stmt->execute([$ip, $email]);
-            } catch (Exception $e) {}
+                // Clear failed attempts for this IP/email on success
+                try {
+                    $stmt = $conn->prepare("DELETE FROM login_attempts WHERE ip_address = ? AND email = ?");
+                    $stmt->execute([$ip, $email]);
+                } catch (Throwable $e) {}
 
-            redirect($user['role'] === 'admin' ? 'admin/dashboard.php' : 'index.php');
-        } else {
-            record_login_attempt($conn, $ip, $email);
-            $error = 'Invalid email or password. Please try again.';
+                redirect($user['role'] === 'admin' ? 'admin/dashboard.php' : 'index.php');
+            } else {
+                record_login_attempt($conn, $ip, $email);
+                $error = 'Invalid email or password. Please try again.';
+            }
+        } catch (Throwable $e) {
+            error_log('Login query failed: ' . $e->getMessage());
+            $error = 'Login is unavailable right now. Please try again in a moment.';
         }
     }
 
     // Periodic cleanup of old login attempts
-    if (random_int(1, 20) === 1) {
-        cleanup_old_login_attempts($conn);
+    try {
+        if (random_int(1, 20) === 1) {
+            cleanup_old_login_attempts($conn);
+        }
+    } catch (Throwable $e) {
+        error_log('Login cleanup failed: ' . $e->getMessage());
     }
 }
 ?>

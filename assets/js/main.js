@@ -209,3 +209,14 @@
     setInterval(tick, 1000);
   });
 })();
+
+/* Homepage banner video: ease the dark hero wash once playback really starts. */
+(function () {
+  var video = document.querySelector('.hero-banner');
+  if (!video) return;
+  var hero = video.closest('.hero');
+  if (!hero) return;
+  function ready() { hero.classList.add('is-video-ready'); }
+  if (!video.paused && video.readyState > 2) ready();
+  video.addEventListener('playing', ready);
+})();
